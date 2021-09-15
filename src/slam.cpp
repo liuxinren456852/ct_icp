@@ -92,7 +92,7 @@ SLAMOptions read_config(const std::string &config_path) {
 
         if (dataset_node["dataset"]) {
             auto dataset = dataset_node["dataset"].as<std::string>();
-            CHECK(dataset == "KITTI_raw" || dataset == "KITTI_CARLA" || dataset == "KITTI" || dataset == "KITTI-360" || dataset == "UrbanLoco" || dataset == "ParisLuco" || dataset == "HILTI" || dataset == "NCLT");
+            CHECK(dataset == "KITTI_raw" || dataset == "KITTI_CARLA" || dataset == "KITTI" || dataset == "KITTI-360" || dataset == "UrbanLoco" || dataset == "ParisLuco" || dataset == "HILTI" || dataset == "NCLT" || dataset == "PLY_DIRECTORY");
             if (dataset == "KITTI_raw")
                 dataset_options.dataset = KITTI_raw;
             if (dataset == "KITTI_CARLA")
@@ -109,6 +109,8 @@ SLAMOptions read_config(const std::string &config_path) {
                 dataset_options.dataset = HILTI;
             if (dataset == "NCLT")
                 dataset_options.dataset = NCLT;
+            if (dataset == "PLY_DIRECTORY")
+              dataset_options.dataset = PLY_DIRECTORY;
         }
         OPTION_CLAUSE(dataset_node, dataset_options, root_path, std::string);
         OPTION_CLAUSE(dataset_node, dataset_options, fail_if_incomplete, bool);
@@ -280,6 +282,8 @@ SLAMOptions read_arguments(int argc, char **argv) {
                       << std::endl;
             exit(1);
         }
+        if(dataset == "PLY_DIRECTORY")
+            options.dataset_options.dataset = DATASET::PLY_DIRECTORY;
         if (dataset == "KITTI_raw")
             options.dataset_options.dataset = DATASET::KITTI_raw;
         if (dataset == "KITTI_CARLA")
@@ -368,7 +372,7 @@ int main(int argc, char **argv) {
     double average_rpe_on_seq = 0.0;
     int nb_seq_with_gt = 0;
 
-//#pragma omp parallel for num_threads(max_num_threads)
+#pragma omp parallel for num_threads(max_num_threads)
     for (int i = 0; i < num_sequences; ++i) { //num_sequences
 
         int sequence_id = sequences[i].sequence_id;

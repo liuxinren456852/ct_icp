@@ -36,7 +36,7 @@ namespace ct_icp {
 
     // Calibration Sequence 00, 01, 02, 13, 14, 15, 16, 17, 18, 19, 20, 21
     const double R_Tr_data_A_KITTI[] = {4.276802385584e-04, -9.999672484946e-01, -8.084491683471e-03,
-                                        -7.210626507497e-03, 8.081198471645e-03, -9.999413164504e-01, 
+                                        -7.210626507497e-03, 8.081198471645e-03, -9.999413164504e-01,
                                         9.999738645903e-01, 4.859485810390e-04, -7.206933692422e-03};
     Eigen::Matrix3d R_Tr_A_KITTI(R_Tr_data_A_KITTI);
     Eigen::Vector3d T_Tr_A_KITTI = Eigen::Vector3d(-1.198459927713e-02, -5.403984729748e-02, -2.921968648686e-01);
@@ -50,7 +50,7 @@ namespace ct_icp {
 
     // Calibration Sequence 04, 05, 06, 07, 08, 09, 10, 11, 12
     const double R_Tr_data_C_KITTI[] = {-1.857739385241e-03, -9.999659513510e-01, -8.039975204516e-03,
-                                        -6.481465826011e-03, 8.051860151134e-03, -9.999466081774e-01, 
+                                        -6.481465826011e-03, 8.051860151134e-03, -9.999466081774e-01,
                                         9.999773098287e-01, -1.805528627661e-03, -6.496203536139e-03};
     const Eigen::Matrix3d R_Tr_C_KITTI(R_Tr_data_C_KITTI);
     const Eigen::Vector3d T_Tr_C_KITTI = Eigen::Vector3d(-4.784029760483e-03, -7.337429464231e-02, -3.339968064433e-01);
@@ -69,10 +69,10 @@ namespace ct_icp {
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /// HARD CODED VALUES FOR KITTI-360
-    const char* KITTI_360_SEQUENCE_NAMES[] = {
+    const char *KITTI_360_SEQUENCE_NAMES[] = {
             "00", "02", "03", "04", "05", "06", "07", "09", "10"
     };
-    const int KITTI_360_SEQUENCE_IDS[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8};
+    const int KITTI_360_SEQUENCE_IDS[] = {0, 1, 2, 3, 4, 5, 6, 7, 8};
     const int NUMBER_SEQUENCES_KITTI_360 = 9;
     const int LENGTH_SEQUENCE_KITTI_360[] = { 11500, 19230, 1029, 11399, 6722, 9697, 3160, 13954, 3742};
 
@@ -80,6 +80,7 @@ namespace ct_icp {
     const double R_Tr_data_KITTI_360[] = { 9.999290633685804508e-01, 5.805355888196038310e-03, 1.040029024212630118e-02,
                                            5.774300279226996999e-03, -9.999787876452227442e-01, 3.013573682642321436e-03,
                                             1.041756443854582707e-02, -2.953305511449066945e-03, -9.999413744330052367e-01 };
+
     const Eigen::Matrix3d R_Tr_KITTI_360(R_Tr_data_KITTI_360);
     Eigen::Vector3d T_Tr_KITTI_360 = Eigen::Vector3d(-7.640302229235816922e-01, 2.966030253893782165e-01, -8.433819635885287935e-01);
 
@@ -154,14 +155,8 @@ namespace ct_icp {
 
         switch (options.dataset) {
             case KITTI_raw:
-                folder_path += sequence_name + "/frames/";
-                break;
             case KITTI_CARLA:
-                folder_path += sequence_name + "/frames/";
-                break;
             case KITTI:
-                folder_path += sequence_name + "/frames/";
-                break;
             case KITTI_360:
                 folder_path += sequence_name + "/frames/";
                 break;
@@ -173,6 +168,8 @@ namespace ct_icp {
                 break;
             case HILTI:
                 folder_path += sequence_name + "/frames/";
+            case PLY_DIRECTORY:
+                folder_path += "frames/";
                 break;
             case NCLT:
                 throw std::runtime_error("Not Implemented!");
@@ -227,10 +224,23 @@ namespace ct_icp {
         return "frame_" + ss.str() + ".ply";
     }
 
+
     inline std::string frame_file_name_urbanloco(int frame_id) {
         std::stringstream ss;
         ss << std::setw(10) << std::setfill('0') << frame_id;
         return ss.str() + ".PLY";
+    }
+
+    inline int CountNumFilesInDirectory(const std::string &dir_path) {
+#ifdef WITH_STD_FILESYSTEM
+        auto dirIter = std::filesystem::directory_iterator(dir_path);
+        int size = std::count_if(
+                begin(dirIter),
+                end(dirIter),
+                [](auto &entry) { return entry.is_regular_file(); });
+        return size;
+#endif
+        return -1;
     }
 
     /* -------------------------------------------------------------------------------------------------------------- */
@@ -263,13 +273,26 @@ namespace ct_icp {
             case NCLT:
                 num_sequences = 27;
                 break;
+            case PLY_DIRECTORY:
+                num_sequences = 1;
+                break;
         }
 
         sequences.reserve(num_sequences);
+        int size = 0;
+        if (options.dataset == PLY_DIRECTORY) {
+            auto dir_path = pointclouds_dir_path(options, "");
+            size = CountNumFilesInDirectory(dir_path);
+        }
 
         for (auto i(0); i < num_sequences; ++i) {
             SequenceInfo new_sequence_info;
             switch (options.dataset) {
+                case PLY_DIRECTORY:
+                    new_sequence_info.sequence_id = 0;;
+                    new_sequence_info.sequence_size = size;
+                    new_sequence_info.sequence_name = "PLY_DIR";
+                    break;
                 case KITTI_raw:
                     new_sequence_info.sequence_id = KITTI_raw_SEQUENCE_IDS[i];
                     new_sequence_info.sequence_size = LENGTH_SEQUENCE_KITTI[new_sequence_info.sequence_id] + 1;
@@ -317,6 +340,8 @@ namespace ct_icp {
 #ifdef WITH_STD_FILESYSTEM
             std::filesystem::path root_path(options.root_path);
             auto sequence_path = root_path / new_sequence_info.sequence_name;
+            if (options.dataset == PLY_DIRECTORY)
+                sequence_path = root_path;
             if (!fs::exists(sequence_path)) {
                 add_sequence = false;
                 LOG(INFO) << "Could not find sequence directory at " << sequence_path.string()
@@ -335,6 +360,7 @@ namespace ct_icp {
 
     /* -------------------------------------------------------------------------------------------------------------- */
     std::vector<Point3D> read_pointcloud(const DatasetOptions &options, int sequence_id, int frame_id) {
+
         std::string frames_dir_path = pointclouds_dir_path(options, sequence_name(options, sequence_id));
         std::string frame_path = frames_dir_path + frame_file_name(frame_id);
 
@@ -346,6 +372,7 @@ namespace ct_icp {
                 return read_kitti_carla_pointcloud(options, frame_path);
             case KITTI:
                 return read_kitti_pointcloud(options, frame_path);
+            case PLY_DIRECTORY:
             case KITTI_360:
                 frame_path = frames_dir_path + frame_file_name_kitti_360(frame_id);
                 return read_kitti_raw_pointcloud(options, frame_path);
@@ -384,6 +411,8 @@ namespace ct_icp {
                 return HILTI_SEQUENCE_NAMES[sequence_id];
             case NCLT:
                 return NCLT_SEQUENCE_NAMES[sequence_id];
+            case PLY_DIRECTORY:
+                return "PLY_DIRECTORY";
         }
         throw std::runtime_error("Dataset not recognised");
     }
@@ -672,7 +701,7 @@ namespace ct_icp {
 
 
     /* -------------------------------------------------------------------------------------------------------------- */
-    ArrayPoses kitti_360_transform_trajectory_frame(const vector<TrajectoryFrame>& trajectory, int sequence_id) {
+    ArrayPoses kitti_360_transform_trajectory_frame(const vector<TrajectoryFrame> &trajectory, int sequence_id) {
         // For KITTI_raw the evaluation counts the middle of the frame as the pose which is compared to the ground truth
         ArrayPoses poses;
         Eigen::Matrix3d R_Tr = R_Tr_KITTI_360.transpose();
@@ -682,7 +711,7 @@ namespace ct_icp {
         Tr.block<3, 1>(0, 3) = T_Tr;
 
         poses.reserve(trajectory.size());
-        for (auto& frame : trajectory) {
+        for (auto &frame: trajectory) {
             Eigen::Matrix3d center_R;
             Eigen::Vector3d center_t;
             Eigen::Quaterniond q_begin = Eigen::Quaterniond(frame.begin_R);
@@ -801,12 +830,12 @@ namespace ct_icp {
     ArrayPoses transform_trajectory_frame(const DatasetOptions &options, const vector<TrajectoryFrame> &trajectory,
                                           int sequence_id) {
         switch (options.dataset) {
+            case PLY_DIRECTORY:
             case KITTI_raw:
+            case KITTI:
                 return kitti_raw_transform_trajectory_frame(trajectory, sequence_id);
             case KITTI_CARLA:
                 return kitti_carla_transform_trajectory_frame(trajectory);
-            case KITTI:
-                return kitti_transform_trajectory_frame(trajectory, sequence_id);
             case KITTI_360:
                 return kitti_360_transform_trajectory_frame(trajectory, sequence_id);
             case URBANLOCO:
@@ -840,6 +869,8 @@ namespace ct_icp {
                 return sequence_id >= 0 && sequence_id <= 10;
             case HILTI:
                 return sequence_id > 10;
+            case PLY_DIRECTORY:
+                return false;
             case NCLT:
                 // TODO Ground truth for NCLT
                 return false;
@@ -870,14 +901,20 @@ namespace ct_icp {
     }
 
     /* -------------------------------------------------------------------------------------------------------------- */
-    DatasetSequence::~DatasetSequence() = default;
+    DatasetSequence::~DatasetSequence() =
+    default;
 
     /* -------------------------------------------------------------------------------------------------------------- */
+
+
+
+
     /// DirectoryIterator for KITTI_raw and KITTI_CARLA and KITTI
     class DirectoryIterator : public DatasetSequence {
     public:
-        explicit DirectoryIterator(const DatasetOptions &options, int sequence_id) : options_(options),
-                                                                                     sequence_id_(sequence_id) {
+        explicit DirectoryIterator(const DatasetOptions &options, int sequence_id = -1) : options_(options),
+                                                                                          sequence_id_(
+                                                                                                  sequence_id) {
             switch (options.dataset) {
                 case KITTI_raw:
                     num_frames_ = LENGTH_SEQUENCE_KITTI[sequence_id] + 1;
@@ -899,6 +936,8 @@ namespace ct_icp {
                     break;
                 case HILTI:
                     num_frames_ = LENGTH_SEQUENCE_HILTI[sequence_id] + 1;
+                case PLY_DIRECTORY:
+                    num_frames_ = CountNumFilesInDirectory(pointclouds_dir_path(options, options.root_path));
                     break;
                 default:
                     num_frames_ = -1;
@@ -1067,7 +1106,8 @@ namespace ct_icp {
                 return std::make_shared<DirectoryIterator>(options, sequence_id);
             case NCLT:
                 return std::make_shared<NCLTIterator>(options, sequence_id);
-
+            case PLY_DIRECTORY:
+                return std::make_shared<DirectoryIterator>(options);
             default:
                 throw std::runtime_error("Not Implemented Error");
         }

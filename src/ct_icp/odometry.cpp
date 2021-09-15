@@ -16,7 +16,7 @@ namespace ct_icp {
     OdometryOptions OdometryOptions::DefaultSlowOutdoorProfile() {
         OdometryOptions default_options;
         default_options.voxel_size = 0.5;
-        default_options.sample_voxel_size = 0.5;
+        default_options.sample_voxel_size = 1.0;
         default_options.max_distance = 100.0;
         default_options.max_num_points_in_voxel = 20;
         default_options.min_distance_points = 0.1;
@@ -30,7 +30,7 @@ namespace ct_icp {
         ct_icp_options.min_number_neighbors = 20;
         ct_icp_options.voxel_neighborhood = 1;
         ct_icp_options.max_number_neighbors = 20;
-        ct_icp_options.max_dist_to_plane_ct_icp = 0.8;
+        ct_icp_options.max_dist_to_plane_ct_icp = 0.5;
         ct_icp_options.norm_x_end_iteration_ct_icp = 0.001;
         ct_icp_options.point_to_plane_with_distortion = true;
         ct_icp_options.distance = CT_POINT_TO_PLANE;
@@ -38,9 +38,11 @@ namespace ct_icp {
         ct_icp_options.beta_constant_velocity = 0.0;
         ct_icp_options.beta_location_consistency = 0.0001;
         ct_icp_options.loss_function = CAUCHY;
+        ct_icp_options.solver = CERES;
         ct_icp_options.ls_max_num_iters = 50;
         ct_icp_options.ls_num_threads = 8;
         ct_icp_options.ls_sigma = 0.1;
+        ct_icp_options.ls_tolerant_min_threshold = 0.05;
 
         return default_options;
     }
@@ -127,37 +129,44 @@ namespace ct_icp {
             trajectory_[index_frame].begin_t = Eigen::Vector3d(0., 0., 0.);
             trajectory_[index_frame].end_R = Eigen::MatrixXd::Identity(3, 3);
             trajectory_[index_frame].end_t = Eigen::Vector3d(0., 0., 0.);
-        }
-        else if (index_frame == 2) {
+        } else if (index_frame == 2) {
             if (options_.initialization == INIT_CONSTANT_VELOCITY) {
                 Eigen::Matrix3d R_next_end =
-                    trajectory_[index_frame - 1].end_R * trajectory_[index_frame - 2].end_R.inverse() *
-                    trajectory_[index_frame - 1].end_R;
+                        trajectory_[index_frame - 1].end_R * trajectory_[index_frame - 2].end_R.inverse() *
+                        trajectory_[index_frame - 1].end_R;
                 Eigen::Vector3d t_next_end = trajectory_[index_frame - 1].end_t +
-                    trajectory_[index_frame - 1].end_R *
-                    trajectory_[index_frame - 2].end_R.inverse() *
-                    (trajectory_[index_frame - 1].end_t -
-                        trajectory_[index_frame - 2].end_t);
+                                             trajectory_[index_frame - 1].end_R *
+                                             trajectory_[index_frame - 2].end_R.inverse() *
+                                             (trajectory_[index_frame - 1].end_t -
+                                              trajectory_[index_frame - 2].end_t);
 
                 trajectory_[index_frame].begin_R = trajectory_[index_frame - 1].end_R;
                 trajectory_[index_frame].begin_t = trajectory_[index_frame - 1].end_t;
                 trajectory_[index_frame].end_R = R_next_end;
                 trajectory_[index_frame].end_t = t_next_end;
-            }
-            else {
+            } else {
                 trajectory_[index_frame] = trajectory_[index_frame - 1];
             }
-        }
-        else {
+        } else {
             if (options_.initialization == INIT_CONSTANT_VELOCITY) {
-                Eigen::Matrix3d R_next_begin =
-                        trajectory_[index_frame - 1].begin_R * trajectory_[index_frame - 2].begin_R.inverse() *
-                        trajectory_[index_frame - 1].begin_R;
-                Eigen::Vector3d t_next_begin = trajectory_[index_frame - 1].begin_t +
-                                               trajectory_[index_frame - 1].begin_R *
-                                               trajectory_[index_frame - 2].begin_R.inverse() *
-                                               (trajectory_[index_frame - 1].begin_t -
-                                                trajectory_[index_frame - 2].begin_t);
+                if (options_.motion_compensation == CONTINUOUS) {
+                    // When continuous: use the previous begin_pose as reference
+                    Eigen::Matrix3d R_next_begin =
+                            trajectory_[index_frame - 1].begin_R * trajectory_[index_frame - 2].begin_R.inverse() *
+                            trajectory_[index_frame - 1].begin_R;
+                    Eigen::Vector3d t_next_begin = trajectory_[index_frame - 1].begin_t +
+                                                   trajectory_[index_frame - 1].begin_R *
+                                                   trajectory_[index_frame - 2].begin_R.inverse() *
+                                                   (trajectory_[index_frame - 1].begin_t -
+                                                    trajectory_[index_frame - 2].begin_t);
+
+                    trajectory_[index_frame].begin_R = R_next_begin;; //trajectory_[index_frame - 1].end_R;
+                    trajectory_[index_frame].begin_t = t_next_begin;; //trajectory_[index_frame - 1].end_t;
+                } else {
+                    // When not continuous: set the new begin and previous end pose to be consistent
+                    trajectory_[index_frame].begin_R = trajectory_[index_frame - 1].end_R;
+                    trajectory_[index_frame].begin_t = trajectory_[index_frame - 1].end_t;
+                }
 
                 Eigen::Matrix3d R_next_end =
                         trajectory_[index_frame - 1].end_R * trajectory_[index_frame - 2].end_R.inverse() *
@@ -168,8 +177,6 @@ namespace ct_icp {
                                              (trajectory_[index_frame - 1].end_t -
                                               trajectory_[index_frame - 2].end_t);
 
-                trajectory_[index_frame].begin_R = R_next_begin;; //trajectory_[index_frame - 1].end_R;
-                trajectory_[index_frame].begin_t = t_next_begin;; //trajectory_[index_frame - 1].end_t;
                 trajectory_[index_frame].end_R = R_next_end;
                 trajectory_[index_frame].end_t = t_next_end;
             } else {
@@ -216,8 +223,7 @@ namespace ct_icp {
             std::vector<Point3D> keypoints;
             if (index_frame < options_.init_num_frames) {
                 grid_sampling(frame, keypoints, options_.init_sample_voxel_size);
-            }
-            else {
+            } else {
                 grid_sampling(frame, keypoints, options_.sample_voxel_size);
             }
 
