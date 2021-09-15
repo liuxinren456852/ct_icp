@@ -419,7 +419,7 @@ namespace ct_icp {
                     point_to_plane_dist = std::abs((keypoint.pt - vector_neighbors[i]).transpose() * normal);
                     if (point_to_plane_dist < options.max_dist_to_plane_ct_icp) {
                         builder.SetResidualBlock(options.num_closest_neighbors * k + i, k, vector_neighbors[i],
-                                                 normal, a2D * a2D, keypoint.alpha_timestamp);
+                                                 normal, a2D, keypoint.alpha_timestamp);
                     }
                 }
             }
@@ -436,7 +436,7 @@ namespace ct_icp {
                                               nullptr,
                                               &begin_t.x());
                     problem->AddResidualBlock(new ceres::AutoDiffCostFunction<ConstantVelocityFunctor,
-                                                      ConstantVelocityFunctor::NumResiduals(), 3, 3>(
+                        ConstantVelocityFunctor::NumResiduals(), 3, 3>(
                             new ConstantVelocityFunctor(previous_velocity, sqrt(number_keypoints_used*options.beta_constant_velocity))),
                                               nullptr,
                                               &begin_t.x(),
@@ -572,7 +572,7 @@ namespace ct_icp {
                 }
 
                 double alpha_timestamp = keypoint.alpha_timestamp;
-                double weight = a2D * a2D; //a2D**2 much better than a2D (a2D**3 is not working)
+                double weight = a2D;
                 Eigen::Vector3d closest_pt_normal = weight * normal;
 
                 Eigen::Vector3d closest_point = vector_neighbors[0];

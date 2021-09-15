@@ -59,6 +59,7 @@ void PlyFile::readHeader()
 		{
 			streamHeader >> strTmp;
 			if (strTmp.compare("vertex") == 0) streamHeader >> _numPoints;
+			else if (strTmp.compare("points") == 0) streamHeader >> _numPoints;
 		}
 
 		if (strTmp.compare("property") == 0)
@@ -114,6 +115,7 @@ void PlyFile::readHeader()
 
 		_pointSize += _propertySize[i];
 	}
+
 }
 
 

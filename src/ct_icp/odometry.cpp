@@ -1,5 +1,7 @@
 #include <omp.h>
 #include <chrono>
+#include <random>
+#include <algorithm>
 #include "odometry.hpp"
 #include "Utilities/PersoTimer.h"
 
@@ -217,6 +219,13 @@ namespace ct_icp {
             }
             else {
                 grid_sampling(frame, keypoints, options_.sample_voxel_size);
+            }
+
+            if ((int)keypoints.size() > 2000) {
+                std::random_device rd;
+                std::mt19937 g(rd());
+                std::shuffle(keypoints.begin(), keypoints.end(),g);
+                keypoints.resize(2000);
             }
 
             auto num_keypoints = (int) keypoints.size();

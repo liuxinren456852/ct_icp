@@ -11,7 +11,10 @@ namespace ct_icp {
         KITTI_CARLA = 1,
         KITTI = 2,
         KITTI_360 = 3,
-        NCLT = 4
+        URBANLOCO = 4,
+        PARISLUCO = 5,
+        HILTI = 6,
+        NCLT = 7
     };
 
     class DatasetSequence {
@@ -72,6 +75,9 @@ namespace ct_icp {
 
     // Reads a PointCloud from the Dataset KITTI
     std::vector<Point3D> read_kitti_pointcloud(const DatasetOptions&, const std::string& path);
+
+    // Reads a PointCloud from the Dataset URBANLOCO
+    std::vector<Point3D> read_urbanloco_pointcloud(const DatasetOptions&, const std::string& path);
 
     // Reads a PointCloud from the disk
     std::vector<Point3D> read_pointcloud(const DatasetOptions &, int sequence_id, int frame_id);

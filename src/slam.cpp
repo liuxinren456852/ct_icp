@@ -92,7 +92,7 @@ SLAMOptions read_config(const std::string &config_path) {
 
         if (dataset_node["dataset"]) {
             auto dataset = dataset_node["dataset"].as<std::string>();
-            CHECK(dataset == "KITTI_raw" || dataset == "KITTI_CARLA" || dataset == "KITTI" || dataset == "KITTI-360" || dataset == "NCLT");
+            CHECK(dataset == "KITTI_raw" || dataset == "KITTI_CARLA" || dataset == "KITTI" || dataset == "KITTI-360" || dataset == "UrbanLoco" || dataset == "ParisLuco" || dataset == "HILTI" || dataset == "NCLT");
             if (dataset == "KITTI_raw")
                 dataset_options.dataset = KITTI_raw;
             if (dataset == "KITTI_CARLA")
@@ -101,6 +101,12 @@ SLAMOptions read_config(const std::string &config_path) {
                 dataset_options.dataset = KITTI;
             if (dataset == "KITTI-360")
                 dataset_options.dataset = KITTI_360;
+            if (dataset == "UrbanLoco")
+                dataset_options.dataset = URBANLOCO;
+            if (dataset == "ParisLuco")
+                dataset_options.dataset = PARISLUCO;
+            if (dataset == "HILTI")
+                dataset_options.dataset = HILTI;
             if (dataset == "NCLT")
                 dataset_options.dataset = NCLT;
         }
@@ -235,7 +241,7 @@ SLAMOptions read_arguments(int argc, char **argv) {
                                                 "Path to the yaml configuration file on disk",
                                                 false, "", "string");
         TCLAP::ValueArg<std::string> dataset_arg("d", "dataset",
-                                                 "Dataset run for the execution (must be in [KITTI_raw, KITTI-CARLA, KITTI, KITTI-360])",
+                                                 "Dataset run for the execution (must be in [KITTI_raw, KITTI-CARLA, KITTI, KITTI-360, UrbanLoco, ParisLuco])",
                                                  false, "KITTI_raw", "string");
         TCLAP::ValueArg<std::string> dataset_root_arg("r", "dataset_root", "Dataset Root Path on Disk",
                                                       false, "", "string");
@@ -269,8 +275,8 @@ SLAMOptions read_arguments(int argc, char **argv) {
 
 
         std::string dataset = dataset_arg.getValue();
-        if (dataset != "KITTI_raw" && dataset != "KITTI_CARLA" && dataset != "KITTI" && dataset != "KITTI-360") {
-            std::cerr << "Unrecognised dataset" << dataset << ", expected 'KITTI_raw' or 'KITTI_CARLA' or 'KITTI' or 'KITTI-360'. Exiting"
+        if (dataset != "KITTI_raw" && dataset != "KITTI_CARLA" && dataset != "KITTI" && dataset != "KITTI-360" && dataset != "UrbanLoco" && dataset != "ParisLuco") {
+            std::cerr << "Unrecognised dataset" << dataset << ", expected 'KITTI_raw' or 'KITTI_CARLA' or 'KITTI' or 'KITTI-360' or 'UrbanLoco' or 'ParisLuco'. Exiting"
                       << std::endl;
             exit(1);
         }
@@ -282,6 +288,12 @@ SLAMOptions read_arguments(int argc, char **argv) {
             options.dataset_options.dataset = DATASET::KITTI;
         if (dataset == "KITTI-360")
             options.dataset_options.dataset = DATASET::KITTI_360;
+        if (dataset == "UrbanLoco")
+            options.dataset_options.dataset = DATASET::URBANLOCO;
+        if (dataset == "ParisLuco")
+            options.dataset_options.dataset = DATASET::PARISLUCO;
+        if (dataset == "HILTI")
+            options.dataset_options.dataset = DATASET::HILTI;
 
         options.dataset_options.root_path = dataset_root_arg.getValue();
         options.max_num_threads = max_num_threads_arg.getValue();
@@ -356,7 +368,7 @@ int main(int argc, char **argv) {
     double average_rpe_on_seq = 0.0;
     int nb_seq_with_gt = 0;
 
-#pragma omp parallel for num_threads(max_num_threads)
+//#pragma omp parallel for num_threads(max_num_threads)
     for (int i = 0; i < num_sequences; ++i) { //num_sequences
 
         int sequence_id = sequences[i].sequence_id;
