@@ -8,13 +8,18 @@ This repository implements the SLAM **CT-ICP** (see  [our article](https://arxiv
 It is integrated with the python project **[pyLiDAR-SLAM](https://github.com/Kitware/pyLiDAR-SLAM)** which gives access to more datasets. 
 **pyLiDAR-SLAM** requires the installation of the python binding for **CT-ICP** (see below).
 
+# News
+
+#### [14/01/2022] ROS Plugin on branch `dev`
+> We introduce the ROS plugin on branch dev, it is still experimental. Significant changes in branch `dev` were made compared to `master`, thus to obtain the same results as presented in our paper use please use branch `master`. 
+
 # Installation
 
 ##### Ubuntu
 
 ```bash
 .\ct_icp_build.sh Release "Unix Makefiles" ON ON  # Builds the project in "Release" mode, with "Unix Makefiles" cmake generator, with python binding and with the visualization activated
-.\env.sh                                          # Setup the environment (.so locations) 
+source env.sh                                     # Setup the environment (.so locations) 
 .\slam -c default_config.yaml                     # Launches the SLAM
  ```
 
@@ -27,11 +32,16 @@ It is integrated with the python project **[pyLiDAR-SLAM](https://github.com/Kit
 
 To modify options (for viz3d support, or python binding) for the windows script, you can directly modify the `ct_icp_build.bat` file.
 
+### Visualization
+
+> As a debugging/visualization tool (and until we provide a ROS support `rosviz`) we use a home-made/experimental lightweight OpenGL-based pointcloud visualizer **[viz3d](https://github.com/pierdell/viz3d/tree/viz3d-old)** designed for our SLAM use case. 
+
+
 # Python binding
 
 > The steps below will install a python package named `pyct_icp`:
 
-- Generate the cmake project with the following arguments (**Modify ct_build.sh**):
+- Generate the cmake project with the following arguments (**Modify ct_icp_build.sh**):
    
   - `-DWITH_PYTHON_BINDING=ON`: Activate the option to build the python binding
   - `-DPYTHON_EXECUTABLE=<path-to-target-python-exe>`: Path to the target python executable
@@ -44,6 +54,8 @@ To modify options (for viz3d support, or python binding) for the windows script,
 
 The Datasets are publicly available at:
 https://cloud.mines-paristech.fr/index.php/s/UwgVFtiTOmrgKp5
+
+The folder is protected by the following password : **npm3d**
 
 Each dataset is a .zip archive containing the PLY scan file with the relative timestamps for each point in the frame, and if available, the ground truth poses.
 
@@ -86,7 +98,7 @@ The dataset available are the following:
 ### Usage
 ``` 
 > chmod+x ./env.sh    # Set permission on unix to run env.sh
-> ./env.sh            # Setup environment variables 
+> source env.sh            # Setup environment variables 
 > ./slam -h           # Display help for the executable 
 
 USAGE:

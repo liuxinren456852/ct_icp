@@ -38,6 +38,7 @@ namespace ct_icp {
         default_options.motion_compensation = CONTINUOUS;
         default_options.initialization = INIT_CONSTANT_VELOCITY;
 
+        default_options.debug_print = false;
         default_options.debug_viz = false;
         default_options.robust_registration = true;
         default_options.robust_full_voxel_threshold = 0.5;
@@ -48,6 +49,7 @@ namespace ct_icp {
         default_options.robust_threshold_ego_orientation = 5;
 
         auto &ct_icp_options = default_options.ct_icp_options;
+        ct_icp_options.debug_print = false;
         ct_icp_options.init_num_frames = 40;
         ct_icp_options.max_number_neighbors = 20;
         ct_icp_options.min_number_neighbors = 20;
@@ -83,11 +85,12 @@ namespace ct_icp {
         default_options.motion_compensation = CONTINUOUS;
         default_options.initialization = INIT_NONE;
         default_options.debug_viz = false;
+        default_options.debug_print = false;
 
         default_options.robust_registration = true;
         default_options.robust_full_voxel_threshold = 0.5;
         default_options.robust_empty_voxel_threshold = 0.1;
-        default_options.robust_num_attempts = 8;
+        default_options.robust_num_attempts = 3;
         default_options.robust_max_voxel_neighborhood = 4;
         default_options.robust_threshold_relative_orientation = 2;
         default_options.robust_threshold_ego_orientation = 2;
@@ -119,7 +122,8 @@ namespace ct_icp {
         ct_icp_options.ls_tolerant_min_threshold = 0.05;
         ct_icp_options.weight_neighborhood = 0.2;
         ct_icp_options.weight_alpha = 0.8;
-        ct_icp_options.max_num_residuals = 1000;
+        ct_icp_options.weighting_scheme = ALL;
+        ct_icp_options.max_num_residuals = 600;
         ct_icp_options.min_num_residuals = 200;
 
 
@@ -234,8 +238,8 @@ namespace ct_icp {
                                                    (trajectory_[index_frame - 1].begin_t -
                                                     trajectory_[index_frame - 2].begin_t);
 
-                    trajectory_[index_frame].begin_R = R_next_begin;; //trajectory_[index_frame - 1].end_R;
-                    trajectory_[index_frame].begin_t = t_next_begin;; //trajectory_[index_frame - 1].end_t;
+                    trajectory_[index_frame].begin_R = trajectory_[index_frame - 1].end_R; //R_next_begin;
+                    trajectory_[index_frame].begin_t = trajectory_[index_frame - 1].end_t; //t_next_begin;
                 } else {
                     // When not continuous: set the new begin and previous end pose to be consistent
                     trajectory_[index_frame].begin_R = trajectory_[index_frame - 1].end_R;
@@ -462,9 +466,9 @@ namespace ct_icp {
             }
         }
 
-        if (index_frame == 0) {
+        /*if (index_frame == 0) {
             voxel_map_.clear();
-        }
+        }*/
 
         bool add_points = true;
 
